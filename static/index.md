@@ -1,6 +1,7 @@
 # About
 
-Add some information about your project here.
+You shall find a list of YAML config files for use with MakerIoT2020 ESP32 and ESP8266 devices that run on ESPHome
+
 
 # Installation
 
