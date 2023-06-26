@@ -1,0 +1,202 @@
+# These substitutions allow the end user to override certain values
+substitutions:
+  name: "esp12e-fan-controller"
+
+esphome:
+  name: "${name}"
+  # Automatically add the mac address to the name
+  # so you can use a single firmware for all devices
+  name_add_mac_suffix: true
+
+  # This will allow for (future) project identification,
+  # configuration and updates.
+  project:
+    name: MakerIoT2020.3_Speed_FAN-Controller
+    version: "1.0"
+
+esp8266:
+   board: nodemcuv2
+   framework:
+    version: recommended
+   restore_from_flash: True
+
+# To be able to get logs from the device via serial and api.
+logger:
+
+# API is a requirement of the dashboard import.
+api:
+
+# OTA is required for Over-the-Air updating
+ota:
+
+# This should point to the public location of this yaml file.
+dashboard_import:
+  package_import_url: github://makeriot2020/ESPHome/blob/main/esp12e-3speed-fan-controller.yaml@main
+
+wifi:
+  # Set up a wifi access point using the device name above
+  ap:
+    password: "12345678"
+
+# In combination with the `ap` this allows the user
+# to provision wifi credentials to the device.
+captive_portal:
+
+# Sets up the improv via serial client for Wi-Fi provisioning.
+# Handy if your device has a usb port for the user to add credentials when they first get it.
+improv_serial:
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: IP Address
+    ssid:
+      name: SSID
+    bssid:
+      name: BSSID
+    mac_address:
+      name: Wifi MAC
+    scan_results:
+      name: WiFi Scan Results
+     
+
+
+sensor:
+  - platform: adc
+    pin: VCC
+    name: "ESP8266 Chip Voltage"
+    id: mcu_voltage
+    unit_of_measurement: "V"
+    device_class: "voltage"
+    accuracy_decimals: 2
+    update_interval: 60s
+    entity_category: "diagnostic"
+    
+  - platform: wifi_signal
+    name: "WiFi Signal Sensor"
+    id: wifi_strength
+    device_class: "signal_strength"
+    unit_of_measurement: "dBm"
+    update_interval: 240s
+    entity_category: "diagnostic"
+
+  - platform: copy # Reports the WiFi signal strength in %
+    source_id: wifi_strength
+    name: "WiFi Signal Strength"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "%"
+    entity_category: "diagnostic"
+
+binary_sensor:
+  - platform: gpio
+    pin: 
+      number: 12
+      inverted: true
+    name: "Fan Local Control Speed 1"
+    id: "fan_local_1"
+    icon: "mdi:fan-speed-1"
+    filters:
+      - delayed_on: 500ms
+      - delayed_off: 500ms
+    
+    on_press:
+      then:
+        - switch.turn_on: speed1
+    on_release:
+      then:
+        - switch.turn_off: speed1
+    entity_category: "diagnostic"
+  
+  - platform: gpio
+    pin: 
+      number: 13
+      inverted: true
+    name: "Fan Local Control Speed 2"
+    id: "fan_local_2"
+    icon: "mdi:fan-speed-2"
+    filters:
+      - delayed_on: 500ms
+      - delayed_off: 500ms
+    
+    on_press:
+      then:
+        - switch.turn_on: speed2
+    on_release:
+      then:
+        - switch.turn_off: speed2
+    entity_category: "diagnostic"
+
+  - platform: gpio
+    pin: 
+      number: 14
+      inverted: true
+    name: "Fan Local Control Speed 3"
+    id: "fan_local_3"
+    icon: "mdi:fan-speed-3"
+   
+    filters:
+      - delayed_on: 500ms
+      - delayed_off: 500ms
+    
+    on_press:
+      then:
+        - switch.turn_on: speed3
+    on_release:
+      then:
+        - switch.turn_off: speed3
+    entity_category: "diagnostic"
+
+switch:
+  - platform: template
+    name: "Fan Off"
+    id: "fan_off"
+    icon: "mdi:fan-off"
+    lambda: |-
+      if (id(speed1).state or id(speed2).state or id(speed3).state) {
+        return false;
+      } else {
+        return true;
+      }
+    turn_on_action:
+      - switch.turn_off: speed1
+      - switch.turn_off: speed2
+      - switch.turn_off: speed3
+    restore_state: True
+      
+
+  - platform: gpio
+    pin: 16
+    interlock: &interlock_group [speed1, speed2, speed3]
+    interlock_wait_time: 1000ms
+    name: "Fan Speed 1"
+    icon: "mdi:fan-speed-1"
+    id: "speed1"
+    inverted: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    
+    
+  - platform: gpio
+    pin: 5
+    interlock: *interlock_group
+    interlock_wait_time: 1000ms
+    name: "Fan Speed 2"
+    icon: "mdi:fan-speed-2"
+    id: "speed2"
+    inverted: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: gpio
+    pin: 4
+    interlock: *interlock_group
+    interlock_wait_time: 1000ms
+    name: "Fan Speed 3"
+    icon: "mdi:fan-speed-3"
+    id: "speed3"
+    inverted: true
+    restore_mode: RESTORE_DEFAULT_ON
+
+  - platform: restart
+    name: "Restart"
+    entity_category: "diagnostic"
+
