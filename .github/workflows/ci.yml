@@ -10,8 +10,6 @@ jobs:
     strategy:
       matrix:
         file:
-          #- project-template-esp32.yaml
-          #- project-template-esp8266.yaml
           - esp32s-dev.yaml
           - esp12e-3speed-fan-controller.yaml
     steps:
